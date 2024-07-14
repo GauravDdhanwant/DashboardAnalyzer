@@ -11,6 +11,8 @@ import pytesseract
 import openai
 import os
 
+st.set_page_config(layout="wide")
+
 # Check for OpenCV and handle gracefully if not installed
 try:
     import cv2
