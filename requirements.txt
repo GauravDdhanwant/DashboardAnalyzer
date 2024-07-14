@@ -1,6 +1,7 @@
-streamlit==1.34.0
+streamlit==1.36.0
 numpy==1.24.4
 Pillow==9.5.0
 pytesseract==0.3.10
-openai==0.27.0
+openai==0.28.0
 opencv-python-headless==4.5.5.62
+Image==9.5.0
