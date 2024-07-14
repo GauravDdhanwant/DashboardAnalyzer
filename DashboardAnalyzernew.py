@@ -19,16 +19,6 @@ try:
 except ImportError:
     st.error("OpenCV is not installed. Please install it using 'pip install opencv-python-headless'.")
 
-# Ensure Tesseract OCR is available
-tesseract_installed = False
-try:
-    pytesseract.get_tesseract_version()
-    tesseract_installed = True
-except pytesseract.pytesseract.TesseractNotFoundError:
-    st.error("Tesseract OCR is not installed or not found in PATH. Please install it following the instructions provided.")
-
-# st.set_page_config(layout="wide")
-
 # Set up OpenAI API key
 openai.api_key = st.text_input("Enter OpenAI API Key", type="password")
 
@@ -63,16 +53,16 @@ def analyze_screenshot(screenshot):
 
 def generate_summary_from_gpt(text):
     detailed_prompt = (
-        "You are a helpful assistant for summarizing business dashboards and providing a clear understanding of the information presented. "
+        "You are a helpful assistant for summarizing business dashboards and providing a clear understanding of the information presented visualization by visualization"
         "Here is the extracted text from a customer service team quality assessment dashboard: \n\n"
         f"{text}\n\n"
-        "Based on this information, provide a clear and concise summary that explains what is present in the image in an easy-to-understand form."
+        "Based on this information, provide a clear and concise summary that explains what is present in the image in an easy-to-understand form all the key insights on KPIs"
     )
 
     response = openai.ChatCompletion.create(
         model="gpt-4",
         messages=[
-            {"role": "system", "content": "You are a helpful assistant for summarizing business dashboards and providing a clear understanding of the information presented."},
+            {"role": "system", "content": "You are a helpful assistant for summarizing business dashboards and providing a clear understanding of the information presented visualization by visualization."},
             {"role": "user", "content": detailed_prompt}
         ]
     )
@@ -85,6 +75,15 @@ def generate_summary_from_gpt(text):
 st.sidebar.title("Dashboard Analyzer")
 
 uploaded_file = st.sidebar.file_uploader("Upload a Screenshot", type=["png", "jpg", "jpeg"])
+image = Image.open(uploaded_file)
+image_np = np.array(image)
+st.image(image, caption='Uploaded Screenshot', use_column_width=True)
+analysis_result = analyze_screenshot(image_np)
+
+st.header("Analysis")
+
+st.subheader("Summary")
+st.write(analysis_result['summary'])
 
 if uploaded_file is not None and tesseract_installed and openai.api_key:
     image = Image.open(uploaded_file)
