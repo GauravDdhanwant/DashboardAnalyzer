@@ -4,4 +4,3 @@ Pillow==9.5.0
 pytesseract==0.3.10
 openai==0.28.0
 opencv-python-headless==4.5.5.62
-Image==9.5.0
