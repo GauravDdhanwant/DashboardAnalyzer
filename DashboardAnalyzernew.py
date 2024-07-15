@@ -10,6 +10,7 @@ from PIL import Image
 import pytesseract
 import openai
 import os
+import cv2
 
 st.set_page_config(layout="wide")
 # Check for OpenCV and handle gracefully if not installed
