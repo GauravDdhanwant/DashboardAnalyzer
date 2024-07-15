@@ -6,7 +6,8 @@
 
 import streamlit as st
 import numpy as np
-import pytesseract
+# import pytesseract
+import easyocr
 import openai
 import os
 import cv2
@@ -22,8 +23,11 @@ st.set_page_config(layout="wide")
 # Set up OpenAI API key
 openai.api_key = st.text_input("Enter OpenAI API Key", type="password")
 
-if not openai.api_key:
-    st.error("OpenAI API key is not set. Please set it as an environment variable 'OPENAI_API_KEY'.")
+# Initialize EasyOCR reader
+reader = easyocr.Reader(['en'])
+
+# if not openai.api_key:
+#     st.error("OpenAI API key is not set. Please set it as an environment variable 'OPENAI_API_KEY'.")
 
 def analyze_screenshot(screenshot):
     analysis_result = {}
@@ -42,7 +46,11 @@ def analyze_screenshot(screenshot):
         return
 
     # Use OCR to extract text
-    text = pytesseract.image_to_string(gray_screenshot)
+    # text = pytesseract.image_to_string(gray_screenshot)
+
+    # Use EasyOCR to extract text
+    results = reader.readtext(gray_screenshot, detail=0)
+    text = ' '.join(results)
 
     # Use GPT-4 to generate a human-readable summary of the extracted text
     summary = generate_summary_from_gpt(text)
