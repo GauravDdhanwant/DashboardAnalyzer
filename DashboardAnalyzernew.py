@@ -10,23 +10,23 @@ import easyocr
 import openai
 import os
 import cv2
+
 st.set_page_config(layout="wide")
-# Ensure Tesseract OCR is available
-# tesseract_installed = False
-# try:
-#     pytesseract.get_tesseract_version()
-#     tesseract_installed = True
-# except pytesseract.pytesseract.TesseractNotFoundError:
-#     st.error("Tesseract OCR is not installed or not found in PATH. Please install it following the instructions provided [here](https://github.com/tesseract-ocr/tesseract/wiki).")
 
 # Set up OpenAI API key
 openai.api_key = st.text_input("Enter OpenAI API Key", type="password")
 
-# Initialize EasyOCR reader
-reader = easyocr.Reader(['en'])
+if not openai.api_key:
+    st.error("OpenAI API key is not set. Please set it as an environment variable 'OPENAI_API_KEY'.")
 
-# if not openai.api_key:
-#     st.error("OpenAI API key is not set. Please set it as an environment variable 'OPENAI_API_KEY'.")
+# Streamlit UI
+st.sidebar.title("Dashboard Analyzer")
+
+uploaded_file = st.sidebar.file_uploader("Upload a Screenshot", type=["png", "jpg", "jpeg"])
+
+# Initialize EasyOCR reader with a progress bar
+with st.spinner("Downloading OCR model... This may take a few minutes."):
+    reader = easyocr.Reader(['en'])
 
 def analyze_screenshot(screenshot):
     analysis_result = {}
@@ -43,9 +43,6 @@ def analyze_screenshot(screenshot):
     else:
         st.error("Unexpected image format.")
         return
-
-# Use OCR to extract text
-# text = pytesseract.image_to_string(gray_screenshot)
 
     # Use EasyOCR to extract text
     results = reader.readtext(gray_screenshot, detail=0)
@@ -77,11 +74,6 @@ def generate_summary_from_gpt(text):
     summary = response.choices[0].message['content'].strip()
 
     return summary
-
-# Streamlit UI
-st.sidebar.title("Dashboard Analyzer")
-
-uploaded_file = st.sidebar.file_uploader("Upload a Screenshot", type=["png", "jpg", "jpeg"])
 
 if uploaded_file is not None and openai.api_key:
     # Read the uploaded file using OpenCV
