@@ -6,7 +6,6 @@
 
 import streamlit as st
 import numpy as np
-# import pytesseract
 import easyocr
 import openai
 import os
@@ -45,8 +44,8 @@ def analyze_screenshot(screenshot):
         st.error("Unexpected image format.")
         return
 
-    # Use OCR to extract text
-    # text = pytesseract.image_to_string(gray_screenshot)
+# Use OCR to extract text
+# text = pytesseract.image_to_string(gray_screenshot)
 
     # Use EasyOCR to extract text
     results = reader.readtext(gray_screenshot, detail=0)
