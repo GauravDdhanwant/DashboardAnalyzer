@@ -12,12 +12,12 @@ import os
 import cv2
 st.set_page_config(layout="wide")
 # Ensure Tesseract OCR is available
-tesseract_installed = False
-try:
-    pytesseract.get_tesseract_version()
-    tesseract_installed = True
-except pytesseract.pytesseract.TesseractNotFoundError:
-    st.error("Tesseract OCR is not installed or not found in PATH. Please install it following the instructions provided [here](https://github.com/tesseract-ocr/tesseract/wiki).")
+# tesseract_installed = False
+# try:
+#     pytesseract.get_tesseract_version()
+#     tesseract_installed = True
+# except pytesseract.pytesseract.TesseractNotFoundError:
+#     st.error("Tesseract OCR is not installed or not found in PATH. Please install it following the instructions provided [here](https://github.com/tesseract-ocr/tesseract/wiki).")
 
 # Set up OpenAI API key
 openai.api_key = st.text_input("Enter OpenAI API Key", type="password")
@@ -76,7 +76,7 @@ st.sidebar.title("Dashboard Analyzer")
 
 uploaded_file = st.sidebar.file_uploader("Upload a Screenshot", type=["png", "jpg", "jpeg"])
 
-if uploaded_file is not None and tesseract_installed and openai.api_key:
+if uploaded_file is not None and openai.api_key:
     # Read the uploaded file using OpenCV
     file_bytes = np.asarray(bytearray(uploaded_file.read()), dtype=np.uint8)
     image = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
