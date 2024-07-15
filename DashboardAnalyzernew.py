@@ -10,7 +10,7 @@ import pytesseract
 import openai
 import os
 import cv2
-
+st.set_page_config(layout="wide")
 # Ensure Tesseract OCR is available
 tesseract_installed = False
 try:
@@ -18,8 +18,6 @@ try:
     tesseract_installed = True
 except pytesseract.pytesseract.TesseractNotFoundError:
     st.error("Tesseract OCR is not installed or not found in PATH. Please install it following the instructions provided [here](https://github.com/tesseract-ocr/tesseract/wiki).")
-
-st.set_page_config(layout="wide")
 
 # Set up OpenAI API key
 openai.api_key = st.text_input("Enter OpenAI API Key", type="password")
