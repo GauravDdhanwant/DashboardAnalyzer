@@ -56,7 +56,7 @@ def analyze_screenshot(screenshot):
 
 def generate_summary_from_gpt(text):
     detailed_prompt = (
-        "You are a helpful assistant for summarizing business dashboards and providing a clear understanding of the information presented. "
+        "You are a helpful assistant for summarizing business dashboards and providing a clear understanding of the information presented. With Precise understanding of the visuals and the type of analysis it is doing which whould be precisly captured "
         "Here is the extracted text from a customer service team quality assessment dashboard: \n\n"
         f"{text}\n\n"
         "Based on this information, provide a clear and concise summary that explains what is present in the image in an easy-to-understand form."
@@ -65,7 +65,7 @@ def generate_summary_from_gpt(text):
         response = openai.ChatCompletion.create(
             model="gpt-4",
             messages=[
-                {"role": "system", "content": "You are a helpful assistant for summarizing business dashboards and providing a clear understanding of the information presented."},
+                {"role": "system", "content": "You are a helpful assistant for summarizing business dashboards and providing a clear understanding of the information presented visual by visual by understanding what is the purpose of the visual"},
                 {"role": "user", "content": detailed_prompt}
             ]
         )
