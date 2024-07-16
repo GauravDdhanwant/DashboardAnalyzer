@@ -56,7 +56,7 @@ def analyze_screenshot(screenshot):
 
 def generate_summary_from_gpt(text):
     detailed_prompt = (
-        "You are a helpful assistant for summarizing business dashboards and providing a clear understanding of the information presented. With Precise understanding of the visuals and the type of analysis it is doing which whould be precisly captured "
+        "You are a helpful assistant for summarizing business dashboards and providing a clear understanding of the numerical Insights presented. With Precise understanding of the visuals and the type of analysis it is doing which whould be precisly captured "
         "Here is the extracted text from a customer service team quality assessment dashboard: \n\n"
         f"{text}\n\n"
         "Based on this information, provide a clear and concise summary that explains what is present in the image in an easy-to-understand form."
