@@ -56,8 +56,7 @@ def analyze_screenshot(screenshot):
 
 def generate_summary_from_gpt(text):
     detailed_prompt = (
-        "Objective is
-You are an advanced analytical AI tasked with interpreting and deriving insights from a dashboard. Your role is to not only describe what is visually present in each component of the dashboard but also to provide meaningful takeaways, trends, and potential implications of the data displayed.
+"Objective is You are an advanced analytical AI tasked with interpreting and deriving insights from a dashboard. Your role is to not only describe what is visually present in each component of the dashboard but also to provide meaningful takeaways, trends, and potential implications of the data displayed.
 Dashboard Analysis Instructions
 Overview Description
 Provide a high-level overview of the dashboard. Mention the general layout, primary sections, and any noticeable themes or focuses.
