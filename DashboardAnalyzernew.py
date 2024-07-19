@@ -74,7 +74,7 @@ Always ensure your analysis is thorough and provides actionable insights beyond 
 """
 )
 
-    )
+    
     try:
         response = openai.ChatCompletion.create(
             model="gpt-4",
