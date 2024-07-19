@@ -73,9 +73,7 @@ For example, consider a bar chart titled "Monthly Sales by Region," with the X-a
 Always ensure your analysis is thorough and provides actionable insights beyond the surface-level data. The goal is to enable stakeholders to make informed decisions based on your interpretations.
 """
 )
-"Here is the extracted text from a customer service team quality assessment dashboard: \n\n"
-f"{text}\n\n"
-"Based on this information, provide a clear and concise summary that explains what is present in the image in an easy-to-understand form."
+
     )
     try:
         response = openai.ChatCompletion.create(
