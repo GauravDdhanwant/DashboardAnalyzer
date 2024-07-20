@@ -8,7 +8,6 @@ import easyocr
 import openai
 import cv2
 from PIL import Image
-import pytesseract
 
 st.set_page_config(layout="wide")
 
@@ -39,18 +38,26 @@ def extract_text(image):
     return text
 
 def detect_visuals(image):
-    # Placeholder for visual detection logic
-    # For simplicity, we'll assume the entire image is one visual in this example
-    visuals = [image]
+    # For simplicity, we will detect rectangular areas as potential visuals
+    # This should be replaced with a more sophisticated method in a real-world scenario
+    visuals = []
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    edges = cv2.Canny(gray, 50, 150, apertureSize=3)
+    contours, _ = cv2.findContours(edges, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    
+    for cnt in contours:
+        x, y, w, h = cv2.boundingRect(cnt)
+        if w > 50 and h > 50:  # Filter out small regions
+            visuals.append(image[y:y+h, x:x+w])
     return visuals
 
 def analyze_visual(visual):
     processed_visual = preprocess_image(visual)
     text = extract_text(processed_visual)
-    summary = generate_summary_from_gpt(text)
-    return summary
+    summary, action_items = generate_insights_and_actions_from_gpt(text)
+    return summary, action_items
 
-def generate_summary_from_gpt(text):
+def generate_insights_and_actions_from_gpt(text):
     detailed_prompt = (
         "You are a helpful assistant for summarizing business dashboards and providing a clear understanding of the information presented. Read the visualizations and draw meaningful insights. "
         "Here is the extracted text from a customer service team quality assessment dashboard: \n\n"
@@ -63,15 +70,16 @@ def generate_summary_from_gpt(text):
         response = openai.ChatCompletion.create(
             model="gpt-4",
             messages=[
-                {"role": "system", "content": "You are a helpful assistant for summarizing business dashboards and providing a clear understanding numerical insights of the information presented visual by visual by understanding what is the purpose of the visual"},
+                {"role": "system", "content": "You are a helpful assistant for summarizing business dashboards and providing a clear understanding of the numerical insights of the information presented visual by visual by understanding what is the purpose of the visual."},
                 {"role": "user", "content": detailed_prompt}
             ]
         )
         summary = response.choices[0].message['content'].strip()
-        return summary
+        action_items = response.choices[1].message['content'].strip()
+        return summary, action_items
     except Exception as e:
         st.error(f"An error occurred: {str(e)}")
-        return None
+        return None, None
 
 if uploaded_file is not None and openai.api_key:
     # Read the uploaded file using OpenCV
@@ -85,6 +93,8 @@ if uploaded_file is not None and openai.api_key:
 
     st.header("Analysis")
 
-    for i, result in enumerate(analysis_results):
+    for i, (summary, action_items) in enumerate(analysis_results):
         st.subheader(f"Summary for Visual {i+1}")
-        st.write(result)
+        st.write(summary)
+        st.subheader(f"Action Items for Visual {i+1}")
+        st.write(action_items)
