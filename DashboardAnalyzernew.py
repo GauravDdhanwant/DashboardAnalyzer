@@ -6,8 +6,9 @@ import streamlit as st
 import numpy as np
 import easyocr
 import openai
-import os
 import cv2
+from PIL import Image
+import pytesseract
 
 st.set_page_config(layout="wide")
 
@@ -27,39 +28,35 @@ uploaded_file = st.sidebar.file_uploader("Upload a Screenshot", type=["png", "jp
 with st.spinner("Downloading OCR model... This may take a few minutes."):
     reader = easyocr.Reader(['en'])
 
-def analyze_screenshot(screenshot):
-    analysis_result = {}
+def preprocess_image(image):
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    _, binary = cv2.threshold(gray, 128, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)
+    return binary
 
-    # Check the number of channels in the image
-    st.write(f"Image shape: {screenshot.shape}")
-
-    if len(screenshot.shape) == 2:  # Grayscale image
-        gray_screenshot = screenshot
-    elif len(screenshot.shape) == 3:
-        if screenshot.shape[2] == 4:  # 4 channels (BGRA)
-            screenshot = cv2.cvtColor(screenshot, cv2.COLOR_BGRA2BGR)
-        gray_screenshot = cv2.cvtColor(screenshot, cv2.COLOR_BGR2GRAY)
-    else:
-        st.error("Unexpected image format.")
-        return
-
-    # Use EasyOCR to extract text
-    results = reader.readtext(gray_screenshot, detail=0)
+def extract_text(image):
+    results = reader.readtext(image, detail=0)
     text = ' '.join(results)
+    return text
 
-    # Use GPT-4 to generate a human-readable summary of the extracted text
+def detect_visuals(image):
+    # Placeholder for visual detection logic
+    # For simplicity, we'll assume the entire image is one visual in this example
+    visuals = [image]
+    return visuals
+
+def analyze_visual(visual):
+    processed_visual = preprocess_image(visual)
+    text = extract_text(processed_visual)
     summary = generate_summary_from_gpt(text)
-
-    analysis_result['summary'] = summary
-
-    return analysis_result
+    return summary
 
 def generate_summary_from_gpt(text):
     detailed_prompt = (
-        "You are a helpful assistant for summarizing business dashboards and providing a clear understanding of the information presented.Read the visualizations and draw meaningful insights "
+        "You are a helpful assistant for summarizing business dashboards and providing a clear understanding of the information presented. Read the visualizations and draw meaningful insights. "
         "Here is the extracted text from a customer service team quality assessment dashboard: \n\n"
         f"{text}\n\n"
-        "Based on this information, provide a clear and concise summary that explains what is present in the image in an easy-to-understand form."
+        "Based on this information, provide a clear and concise summary that explains what is present in the image in an easy-to-understand form. "
+        "Additionally, provide actionable recommendations based on the data."
     )
     
     try:
@@ -83,9 +80,11 @@ if uploaded_file is not None and openai.api_key:
     image_np = np.array(image)
     st.image(cv2.cvtColor(image_np, cv2.COLOR_BGR2RGB), caption='Uploaded Screenshot', use_column_width=True)
 
-    analysis_result = analyze_screenshot(image_np)
+    visuals = detect_visuals(image_np)
+    analysis_results = [analyze_visual(visual) for visual in visuals]
 
     st.header("Analysis")
 
-    st.subheader("Summary")
-    st.write(analysis_result['summary'])
+    for i, result in enumerate(analysis_results):
+        st.subheader(f"Summary for Visual {i+1}")
+        st.write(result)
