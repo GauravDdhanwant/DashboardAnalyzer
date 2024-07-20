@@ -74,9 +74,17 @@ def generate_insights_and_actions_from_gpt(text):
                 {"role": "user", "content": detailed_prompt}
             ]
         )
-        summary = response.choices[0].message['content'].strip()
-        action_items = response.choices[1].message['content'].strip()
-        return summary, action_items
+        if response and response.choices and len(response.choices) > 0:
+            result = response.choices[0].message['content'].strip()
+            if "Summary:" in result and "Action Items:" in result:
+                summary, action_items = result.split("Action Items:")
+                summary = summary.replace("Summary:", "").strip()
+                action_items = action_items.strip()
+                return summary, action_items
+            else:
+                return result, "No specific action items found."
+        else:
+            return "No response from OpenAI.", "No specific action items found."
     except Exception as e:
         st.error(f"An error occurred: {str(e)}")
         return None, None
@@ -94,7 +102,10 @@ if uploaded_file is not None and openai.api_key:
     st.header("Analysis")
 
     for i, (summary, action_items) in enumerate(analysis_results):
-        st.subheader(f"Summary for Visual {i+1}")
-        st.write(summary)
-        st.subheader(f"Action Items for Visual {i+1}")
-        st.write(action_items)
+        if summary and action_items:
+            st.subheader(f"Summary for Visual {i+1}")
+            st.write(summary)
+            st.subheader(f"Action Items for Visual {i+1}")
+            st.write(action_items)
+        else:
+            st.write(f"Error analyzing visual {i+1}")
