@@ -5,5 +5,4 @@ openai
 opencv-python-headless
 torch
 torchvision
-git+https://github.com/ultralytics/yolov5.git@master
-cv2
+PyYAML>=5.3.1
