@@ -6,3 +6,4 @@ opencv-python-headless
 torch
 torchvision
 git+https://github.com/ultralytics/yolov5.git@master
+cV2
