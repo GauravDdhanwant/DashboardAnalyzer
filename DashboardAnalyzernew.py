@@ -5,7 +5,10 @@ import openai
 import cv2
 from PIL import Image
 import torch
-from yolov5 import detect
+from yolov5.models.common import DetectMultiBackend
+from yolov5.utils.general import non_max_suppression, scale_coords
+from yolov5.utils.datasets import letterbox
+from yolov5.utils.torch_utils import select_device
 
 st.set_page_config(layout="wide")
 
@@ -26,7 +29,9 @@ with st.spinner("Downloading OCR model... This may take a few minutes."):
     reader = easyocr.Reader(['en'])
 
 # Load YOLOv5 model
-model = torch.hub.load('ultralytics/yolov5', 'yolov5s')
+device = select_device('')
+model_path = 'yolov5s.pt'  # Path to the downloaded weights
+model = DetectMultiBackend(model_path, device=device)
 
 def preprocess_image(image):
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
@@ -39,14 +44,29 @@ def extract_text(image):
     return text
 
 def detect_visuals(image):
-    results = model(image)
+    img = letterbox(image, new_shape=640)[0]
+    img = img[:, :, ::-1].transpose(2, 0, 1)  # BGR to RGB, to 3x416x416
+    img = np.ascontiguousarray(img)
+    
+    img = torch.from_numpy(img).to(device)
+    img = img.float()  # uint8 to fp16/32
+    img /= 255.0  # 0 - 255 to 0.0 - 1.0
+
+    if img.ndimension() == 3:
+        img = img.unsqueeze(0)
+    
+    pred = model(img, augment=False, visualize=False)
+    pred = non_max_suppression(pred, 0.25, 0.45, classes=None, agnostic=False)
+
     visuals = []
-    for result in results.xyxy[0]:
-        x1, y1, x2, y2, conf, cls = result
-        x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
-        class_name = model.names[int(cls)]
-        if conf > 0.5:  # Confidence threshold
-            visuals.append((image[y1:y2, x1:x2], class_name))
+    for det in pred:
+        if len(det):
+            det[:, :4] = scale_coords(img.shape[2:], det[:, :4], image.shape).round()
+            for *xyxy, conf, cls in reversed(det):
+                x1, y1, x2, y2 = map(int, xyxy)
+                class_name = model.names[int(cls)]
+                if conf > 0.5:  # Confidence threshold
+                    visuals.append((image[y1:y2, x1:x2], class_name))
     return visuals
 
 def analyze_visual(visual, class_name):
