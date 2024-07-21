@@ -8,6 +8,8 @@ import easyocr
 import openai
 import cv2
 from PIL import Image
+import pytesseract
+from yolo import YOLO  # Assume you have a YOLO implementation or use a pre-trained model
 
 st.set_page_config(layout="wide")
 
@@ -27,6 +29,9 @@ uploaded_file = st.sidebar.file_uploader("Upload a Screenshot", type=["png", "jp
 with st.spinner("Downloading OCR model... This may take a few minutes."):
     reader = easyocr.Reader(['en'])
 
+# Load YOLO model
+yolo = YOLO(model_path='yolo.h5', classes_path='yolo_classes.txt')
+
 def preprocess_image(image):
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     _, binary = cv2.threshold(gray, 128, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)
@@ -38,24 +43,22 @@ def extract_text(image):
     return text
 
 def detect_visuals(image):
-    # For simplicity, we will detect rectangular areas as potential visuals
-    # This should be replaced with a more sophisticated method in a real-world scenario
     visuals = []
-    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    edges = cv2.Canny(gray, 50, 150, apertureSize=3)
-    contours, _ = cv2.findContours(edges, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-    
-    for cnt in contours:
-        x, y, w, h = cv2.boundingRect(cnt)
+    results = yolo.detect_image(image)
+    for box in results:
+        x, y, w, h, class_name = box
         if w > 50 and h > 50:  # Filter out small regions
-            visuals.append(image[y:y+h, x:x+w])
+            visuals.append((image[y:y+h, x:x+w], class_name))
     return visuals
 
-def analyze_visual(visual):
-    processed_visual = preprocess_image(visual)
-    text = extract_text(processed_visual)
-    summary, action_items = generate_insights_and_actions_from_gpt(text)
-    return summary, action_items
+def analyze_visual(visual, class_name):
+    if class_name in ['chart', 'table']:
+        processed_visual = preprocess_image(visual)
+        text = extract_text(processed_visual)
+        summary, action_items = generate_insights_and_actions_from_gpt(text)
+        return summary, action_items
+    else:
+        return "Unsupported visual type", "No action items available"
 
 def generate_insights_and_actions_from_gpt(text):
     detailed_prompt = (
@@ -97,7 +100,7 @@ if uploaded_file is not None and openai.api_key:
     st.image(cv2.cvtColor(image_np, cv2.COLOR_BGR2RGB), caption='Uploaded Screenshot', use_column_width=True)
 
     visuals = detect_visuals(image_np)
-    analysis_results = [analyze_visual(visual) for visual in visuals]
+    analysis_results = [analyze_visual(visual, class_name) for visual, class_name in visuals]
 
     st.header("Analysis")
 
@@ -109,3 +112,4 @@ if uploaded_file is not None and openai.api_key:
             st.write(action_items)
         else:
             st.write(f"Error analyzing visual {i+1}")
+
