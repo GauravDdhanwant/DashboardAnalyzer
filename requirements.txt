@@ -1,9 +1,8 @@
-
-streamlit==1.34.0
-numpy==1.24.4
+streamlit
+numpy
 easyocr
-openai==0.27.0
+openai
 opencv-python-headless
-Image
-pytesseract
-yolov5
+torch
+torchvision
+git+https://github.com/ultralytics/yolov5.git@master
