@@ -1,15 +1,11 @@
-#!/usr/bin/env python
-# coding: utf-8
-
-# In[3]:
 import streamlit as st
 import numpy as np
 import easyocr
 import openai
 import cv2
 from PIL import Image
-import pytesseract
-from yolo import YOLO  # Assume you have a YOLO implementation or use a pre-trained model
+import torch
+from yolov5 import detect
 
 st.set_page_config(layout="wide")
 
@@ -29,8 +25,8 @@ uploaded_file = st.sidebar.file_uploader("Upload a Screenshot", type=["png", "jp
 with st.spinner("Downloading OCR model... This may take a few minutes."):
     reader = easyocr.Reader(['en'])
 
-# Load YOLO model
-yolo = YOLO(model_path='yolo.h5', classes_path='yolo_classes.txt')
+# Load YOLOv5 model
+model = torch.hub.load('ultralytics/yolov5', 'yolov5s')
 
 def preprocess_image(image):
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
@@ -43,16 +39,18 @@ def extract_text(image):
     return text
 
 def detect_visuals(image):
+    results = model(image)
     visuals = []
-    results = yolo.detect_image(image)
-    for box in results:
-        x, y, w, h, class_name = box
-        if w > 50 and h > 50:  # Filter out small regions
-            visuals.append((image[y:y+h, x:x+w], class_name))
+    for result in results.xyxy[0]:
+        x1, y1, x2, y2, conf, cls = result
+        x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
+        class_name = model.names[int(cls)]
+        if conf > 0.5:  # Confidence threshold
+            visuals.append((image[y1:y2, x1:x2], class_name))
     return visuals
 
 def analyze_visual(visual, class_name):
-    if class_name in ['chart', 'table']:
+    if class_name in ['chart', 'table', 'text']:
         processed_visual = preprocess_image(visual)
         text = extract_text(processed_visual)
         summary, action_items = generate_insights_and_actions_from_gpt(text)
@@ -112,4 +110,3 @@ if uploaded_file is not None and openai.api_key:
             st.write(action_items)
         else:
             st.write(f"Error analyzing visual {i+1}")
-
