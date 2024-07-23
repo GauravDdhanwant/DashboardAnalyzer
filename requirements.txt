@@ -2,7 +2,7 @@ streamlit
 numpy
 easyocr
 openai
-opencv-python-headless
+opencv-python
 torch
-torchvision
-PyYAML>=5.3.1
+detectron2
+Pillow
