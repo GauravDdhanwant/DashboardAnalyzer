@@ -3,6 +3,6 @@ easyocr
 openai
 opencv-python
 torch
-detectron2
+#detectron2
 Pillow
 python-bidi==0.4.2
