@@ -3,10 +3,7 @@ import numpy as np
 import easyocr
 import openai
 import cv2
-from detectron2.engine import DefaultPredictor
-from detectron2.config import get_cfg
-from detectron2 import model_zoo
-from detectron2.utils.visualizer import Visualizer
+from bidi.algorithm import get_display
 
 st.set_page_config(layout="wide")
 
@@ -25,13 +22,6 @@ uploaded_file = st.sidebar.file_uploader("Upload a Screenshot", type=["png", "jp
 # Initialize EasyOCR reader with a progress bar
 with st.spinner("Downloading OCR model... This may take a few minutes."):
     reader = easyocr.Reader(['en'])
-
-# Initialize Detectron2 model
-cfg = get_cfg()
-cfg.merge_from_file(model_zoo.get_config_file("COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml"))
-cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.5  # set threshold for this model
-cfg.MODEL.WEIGHTS = model_zoo.get_checkpoint_url("COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml")
-predictor = DefaultPredictor(cfg)
 
 def analyze_screenshot(screenshot):
     analysis_result = {}
@@ -53,16 +43,15 @@ def analyze_screenshot(screenshot):
     results = reader.readtext(gray_screenshot, detail=0)
     text = ' '.join(results)
 
-    # Use Detectron2 to extract visual elements
-    outputs = predictor(screenshot)
-    v = Visualizer(screenshot[:, :, ::-1], scale=1.2)
-    out = v.draw_instance_predictions(outputs["instances"].to("cpu"))
-    visual_elements_img = out.get_image()[:, :, ::-1]
-
-    st.image(visual_elements_img, caption='Detected Visual Elements', use_column_width=True)
+    # Use OpenCV to extract visual elements (e.g., contours)
+    contours, hierarchy = cv2.findContours(gray_screenshot, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    visual_elements_img = screenshot.copy()
+    cv2.drawContours(visual_elements_img, contours, -1, (0, 255, 0), 3)
+    
+    st.image(cv2.cvtColor(visual_elements_img, cv2.COLOR_BGR2RGB), caption='Detected Visual Elements', use_column_width=True)
 
     # Use GPT-4 to generate a human-readable summary of the extracted text and visual elements
-    summary = generate_summary_from_gpt(text, outputs)
+    summary = generate_summary_from_gpt(text, contours)
 
     analysis_result['summary'] = summary
 
