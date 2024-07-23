@@ -69,7 +69,7 @@ def generate_summary_from_gpt(text, visual_elements):
         response = openai.ChatCompletion.create(
             model="gpt-4",
             messages=[
-                {"role": "system", "content": "You are a helpful assistant for summarizing business dashboards and providing a clear understanding numerical insights of the information presented visual by visual by understanding what is the purpose of the visual"},
+                {"role": "system", "content": "You are a helpful assistant for summarizing business dashboards and providing a clear understanding of numerical insights of the information presented visual by visual by understanding what is the purpose of the visual"},
                 {"role": "user", "content": detailed_prompt}
             ]
         )
