@@ -6,3 +6,4 @@ opencv-python
 torch
 detectron2
 Pillow
+python-bidi
