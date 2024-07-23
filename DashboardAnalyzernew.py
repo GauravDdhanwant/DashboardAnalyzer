@@ -23,6 +23,18 @@ uploaded_file = st.sidebar.file_uploader("Upload a Screenshot", type=["png", "jp
 with st.spinner("Downloading OCR model... This may take a few minutes."):
     reader = easyocr.Reader(['en'])
 
+def detect_visual_elements(image):
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    blurred = cv2.GaussianBlur(gray, (5, 5), 0)
+    edged = cv2.Canny(blurred, 50, 150)
+
+    contours, _ = cv2.findContours(edged, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+    visual_elements_img = image.copy()
+    cv2.drawContours(visual_elements_img, contours, -1, (0, 255, 0), 3)
+
+    return visual_elements_img, contours
+
 def analyze_screenshot(screenshot):
     analysis_result = {}
 
@@ -43,11 +55,9 @@ def analyze_screenshot(screenshot):
     results = reader.readtext(gray_screenshot, detail=0)
     text = ' '.join(results)
 
-    # Use OpenCV to extract visual elements (e.g., contours)
-    contours, hierarchy = cv2.findContours(gray_screenshot, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-    visual_elements_img = screenshot.copy()
-    cv2.drawContours(visual_elements_img, contours, -1, (0, 255, 0), 3)
-    
+    # Use OpenCV to extract visual elements
+    visual_elements_img, contours = detect_visual_elements(screenshot)
+
     st.image(cv2.cvtColor(visual_elements_img, cv2.COLOR_BGR2RGB), caption='Detected Visual Elements', use_column_width=True)
 
     # Use GPT-4 to generate a human-readable summary of the extracted text and visual elements
@@ -60,20 +70,21 @@ def analyze_screenshot(screenshot):
 def generate_summary_from_gpt(text, visual_elements):
     detailed_prompt = (
         "You are a helpful assistant for summarizing business dashboards and providing a clear understanding of the information presented. "
-        "Read the visualizations and draw meaningful insights. Here is the extracted text from a customer service team quality assessment dashboard: \n\n"
+        "Read the visualizations and draw meaningful insights. Here is the extracted text from a business dashboard: \n\n"
         f"{text}\n\n"
-        "Based on this information and the detected visual elements, provide a clear and concise summary that explains what is present in the image in an easy-to-understand form."
+        "Based on this information and the detected visual elements, provide a clear and concise summary that explains what is present in the image in an easy-to-understand form. "
+        "Consider the types of charts (e.g., bar charts, line charts, pie charts), key metrics, and any notable trends or patterns."
     )
     
     try:
         response = openai.ChatCompletion.create(
             model="gpt-4",
             messages=[
-                {"role": "system", "content": "You are a helpful assistant for summarizing business dashboards and providing a clear understanding of numerical insights of the information presented visual by visual by understanding what is the purpose of the visual"},
+                {"role": "system", "content": "You are a helpful assistant for summarizing business dashboards and providing a clear understanding of numerical insights of the information presented."},
                 {"role": "user", "content": detailed_prompt}
             ]
         )
-        summary = response.choices[0].message['content'].strip()
+        summary = response['choices'][0]['message']['content'].strip()
         return summary
     except Exception as e:
         st.error(f"An error occurred: {str(e)}")
