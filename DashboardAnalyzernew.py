@@ -69,7 +69,7 @@ def analyze_screenshot(screenshot):
 
 def generate_summary_from_gpt(text, visual_elements):
     detailed_prompt = (
-        "You are a helpful assistant for summarizing business dashboards and providing a clear understanding of the information presented. "
+        "You are a helpful assistant for summarizing business dashboards and providing a clear understanding of the information presented. By breaking down the tasks in several steps. first, analyse how many different graphs are there, list each of them along with the type of graph and what is the analysis. Secondly, read the graph thoroughly by analyzing the axes and scale on the axes and using that read the numbers on the charts.Thirdly draw insights  or comparisons or analysis. FInally, suggest action items based on the analysis. "
         "Read the visualizations and draw meaningful insights. Here is the extracted text from a business dashboard: \n\n"
         f"{text}\n\n"
         "Based on this information and the detected visual elements, provide a clear and concise summary that explains what is present in the image in an easy-to-understand form. "
