@@ -1,6 +1,7 @@
 import streamlit as st
 from bs4 import BeautifulSoup
 import google.generativeai as genai
+import hashlib
 
 # Function to configure the API key
 def configure_api(api_key):
@@ -19,10 +20,26 @@ def load_html_file(uploaded_file):
     else:
         return None
 
+# Generate a hash key based on input data
+def generate_cache_key(html_content, question):
+    combined = f"{html_content}-{question}"
+    return hashlib.md5(combined.encode()).hexdigest()
+
+# Cache to store results
+cache = {}
+
 # Insight generation from HTML data
 def generate_insights_from_html(soup, question, task_type):
     html_prompts = [str(soup)]  # Modify as needed to extract relevant parts
-    return get_image_info(html_prompts, question, task_type)
+    cache_key = generate_cache_key(str(soup), question)
+
+    if cache_key in cache:
+        st.info("Using cached result")
+        return cache[cache_key]
+
+    response = get_image_info(html_prompts, question, task_type)
+    cache[cache_key] = response
+    return response
 
 # Task type identification based on HTML data
 def identify_task_type(html_prompts, question):
@@ -45,8 +62,18 @@ def identify_task_type(html_prompts, question):
                       """
 
     prompt_parts = [input_prompt] + html_prompts + [question_prompt]
+    
+    # Check if the same request has already been made
+    cache_key = generate_cache_key(str(html_prompts), question)
+    
+    if cache_key in cache:
+        st.info("Using cached result for task type identification")
+        return cache[cache_key]
+    
     response = model.generate_content(prompt_parts)
-    return str(response.text).strip()
+    task_type = str(response.text).strip()
+    cache[cache_key] = task_type
+    return task_type
 
 # Function to generate insights
 def get_image_info(image_prompts, question, task_type):
