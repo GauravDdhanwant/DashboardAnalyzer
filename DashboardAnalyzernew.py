@@ -1,35 +1,33 @@
 import streamlit as st
-import json
-from PIL import Image
-import io
+from bs4 import BeautifulSoup
 import google.generativeai as genai
 
 # Function to configure the API key
 def configure_api(api_key):
     genai.configure(api_key=api_key)
 
-# Load JSON data from the uploaded file
-def load_json_file(uploaded_file):
+# Load HTML data from the uploaded file
+def load_html_file(uploaded_file):
     if uploaded_file is not None:
         try:
             content = uploaded_file.read().decode("utf-8")
-            json_data = json.loads(content)
-            return json_data
-        except json.JSONDecodeError:
-            st.error("The uploaded file is not a valid JSON.")
+            soup = BeautifulSoup(content, "html.parser")
+            return soup
+        except Exception as e:
+            st.error(f"Error parsing HTML: {e}")
             return None
     else:
         return None
 
-# Insight generation from JSON data
-def generate_insights_from_json(json_data, question, task_type):
-    json_prompts = [str(json_data)]  # Modify as needed to extract relevant parts
-    return get_image_info(json_prompts, question, task_type)
+# Insight generation from HTML data
+def generate_insights_from_html(soup, question, task_type):
+    html_prompts = [str(soup)]  # Modify as needed to extract relevant parts
+    return get_image_info(html_prompts, question, task_type)
 
-# Task type identification based on JSON data
-def identify_task_type_from_json(json_data, question):
-    json_prompts = [str(json_data)]
-    return identify_task_type(json_prompts, question)
+# Task type identification based on HTML data
+def identify_task_type_from_html(soup, question):
+    html_prompts = [str(soup)]
+    return identify_task_type(html_prompts, question)
 
 # Function to generate insights
 def get_image_info(image_prompts, question, task_type):
@@ -94,17 +92,17 @@ api_key = st.sidebar.text_input("Enter your API Key", type="password")
 if api_key:
     configure_api(api_key)
 
-    uploaded_file = st.sidebar.file_uploader("Upload JSON Dashboard File", type=["txt"])
+    uploaded_file = st.sidebar.file_uploader("Upload HTML Dashboard File", type=["txt"])
     question = st.sidebar.text_input("Enter Your Question Here")
 
     if uploaded_file and question:
         with st.spinner("Processing..."):
-            json_data = load_json_file(uploaded_file)
-            if json_data:
-                task_type = identify_task_type_from_json(json_data, question)
-                result = generate_insights_from_json(json_data, question, task_type)
+            soup = load_html_file(uploaded_file)
+            if soup:
+                task_type = identify_task_type_from_html(soup, question)
+                result = generate_insights_from_html(soup, question, task_type)
                 st.write(result)
             else:
-                st.warning("Please upload a valid JSON file.")
+                st.warning("Please upload a valid HTML file.")
 else:
     st.warning("Please enter your API Key.")
