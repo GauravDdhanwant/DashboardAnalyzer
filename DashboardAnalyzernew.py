@@ -1,105 +1,110 @@
 import streamlit as st
-import numpy as np
-import easyocr
-import openai
-import cv2
-from bidi.algorithm import get_display
+import json
+from PIL import Image
+import io
+import google.generativeai as genai
 
-st.set_page_config(layout="wide")
+# Function to configure the API key
+def configure_api(api_key):
+    genai.configure(api_key=api_key)
 
-# Set up OpenAI API key
-openai_api_key_input = st.text_input("Enter OpenAI API Key", type="password")
-openai.api_key = openai_api_key_input
-
-if not openai.api_key:
-    st.error("OpenAI API key is not set. Please set it as an environment variable 'OPENAI_API_KEY'.")
-
-# Streamlit UI
-st.sidebar.title("Dashboard Analyzer")
-
-uploaded_file = st.sidebar.file_uploader("Upload a Screenshot", type=["png", "jpg", "jpeg"])
-
-# Initialize EasyOCR reader with a progress bar
-with st.spinner("Downloading OCR model... This may take a few minutes."):
-    reader = easyocr.Reader(['en'])
-
-def detect_visual_elements(image):
-    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    blurred = cv2.GaussianBlur(gray, (5, 5), 0)
-    edged = cv2.Canny(blurred, 50, 150)
-
-    contours, _ = cv2.findContours(edged, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-
-    visual_elements_img = image.copy()
-    cv2.drawContours(visual_elements_img, contours, -1, (0, 255, 0), 3)
-
-    return visual_elements_img, contours
-
-def analyze_screenshot(screenshot):
-    analysis_result = {}
-
-    # Check the number of channels in the image
-    st.write(f"Image shape: {screenshot.shape}")
-
-    if len(screenshot.shape) == 2:  # Grayscale image
-        gray_screenshot = screenshot
-    elif len(screenshot.shape) == 3:
-        if screenshot.shape[2] == 4:  # 4 channels (BGRA)
-            screenshot = cv2.cvtColor(screenshot, cv2.COLOR_BGRA2BGR)
-        gray_screenshot = cv2.cvtColor(screenshot, cv2.COLOR_BGR2GRAY)
+# Load JSON data from the uploaded file
+def load_json_file(uploaded_file):
+    if uploaded_file is not None:
+        try:
+            content = uploaded_file.read().decode("utf-8")
+            json_data = json.loads(content)
+            return json_data
+        except json.JSONDecodeError:
+            st.error("The uploaded file is not a valid JSON.")
+            return None
     else:
-        st.error("Unexpected image format.")
-        return
-
-    # Use EasyOCR to extract text
-    results = reader.readtext(gray_screenshot, detail=0)
-    text = ' '.join(results)
-
-    # Use OpenCV to extract visual elements
-    visual_elements_img, contours = detect_visual_elements(screenshot)
-
-    st.image(cv2.cvtColor(visual_elements_img, cv2.COLOR_BGR2RGB), caption='Detected Visual Elements', use_column_width=True)
-
-    # Use GPT-4 to generate a human-readable summary of the extracted text and visual elements
-    summary = generate_summary_from_gpt(text, contours)
-
-    analysis_result['summary'] = summary
-
-    return analysis_result
-
-def generate_summary_from_gpt(text, visual_elements):
-    detailed_prompt = (
-        "You are a helpful assistant for summarizing business dashboards and providing a clear understanding of the information presented. By breaking down the tasks in several steps. first, analyse how many different graphs are there, list each of them along with the type of graph and what is the analysis. Secondly, read the graph thoroughly by analyzing the axes and scale on the axes and using that read the numbers on the charts.Thirdly draw insights  or comparisons or analysis. FInally, suggest action items based on the analysis. "
-        "Read the visualizations and draw meaningful insights. Here is the extracted text from a business dashboard: \n\n"
-        f"{text}\n\n"
-        "Based on this information and the detected visual elements, provide a clear and concise summary that explains what is present in the image in an easy-to-understand form. "
-        "Consider the types of charts (e.g., bar charts, line charts, pie charts), key metrics, and any notable trends or patterns."
-    )
-    
-    try:
-        response = openai.ChatCompletion.create(
-            model="gpt-4",
-            messages=[
-                {"role": "system", "content": "You are a helpful assistant for summarizing business dashboards and providing a clear understanding of numerical insights of the information presented."},
-                {"role": "user", "content": detailed_prompt}
-            ]
-        )
-        summary = response['choices'][0]['message']['content'].strip()
-        return summary
-    except Exception as e:
-        st.error(f"An error occurred: {str(e)}")
         return None
 
-if uploaded_file is not None and openai.api_key:
-    # Read the uploaded file using OpenCV
-    file_bytes = np.asarray(bytearray(uploaded_file.read()), dtype=np.uint8)
-    image = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
-    image_np = np.array(image)
-    st.image(cv2.cvtColor(image_np, cv2.COLOR_BGR2RGB), caption='Uploaded Screenshot', use_column_width=True)
+# Insight generation from JSON data
+def generate_insights_from_json(json_data, question, task_type):
+    json_prompts = [str(json_data)]  # Modify as needed to extract relevant parts
+    return get_image_info(json_prompts, question, task_type)
 
-    analysis_result = analyze_screenshot(image_np)
+# Task type identification based on JSON data
+def identify_task_type_from_json(json_data, question):
+    json_prompts = [str(json_data)]
+    return identify_task_type(json_prompts, question)
 
-    st.header("Analysis")
+# Function to generate insights
+def get_image_info(image_prompts, question, task_type):
+    generation_config = {
+        "temperature": 0,
+        "max_output_tokens": 4096,
+    }
 
-    st.subheader("Summary")
-    st.write(analysis_result['summary'])
+    model = genai.GenerativeModel(model_name="gemini-1.5-pro", generation_config=generation_config)
+
+    input_prompt = """You are an expert in reading and analyzing the charts."""
+
+    question_prompt = f"""Question : {question}"""
+
+    # Adjust this logic based on task_type
+    if task_type == "Summarization":
+        # Add specific logic for summarization
+        pass
+    elif task_type == "Question Answering":
+        # Add specific logic for question answering
+        pass
+    elif task_type == "Comparison":
+        # Add specific logic for comparison
+        pass
+
+    prompt_parts = [input_prompt] + image_prompts + [question_prompt]
+    response = model.generate_content(prompt_parts)
+    return str(response.text)
+
+# Streamlit app
+st.set_page_config(page_title="InsightsBoard", page_icon=":bar_chart:", layout="wide")
+
+# Apply the theme
+st.markdown("""
+    <style>
+    .reportview-container {
+        background-color: #f5f5f5;
+    }
+    .sidebar .sidebar-content {
+        background-color: #000000;  /* Set sidebar background to black */
+    }
+    .sidebar .sidebar-content .sidebar-header {
+        background-color: #1e3a8a;
+        color: #ffffff;
+    }
+    .stButton>button {
+        background-color: #1e3a8a;
+        color: #ffffff;
+        border-radius: 4px;
+        border: none;
+    }
+    .stImage {
+        max-width: 100%;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
+st.sidebar.title("InsightsBoard")
+
+api_key = st.sidebar.text_input("Enter your API Key", type="password")
+
+if api_key:
+    configure_api(api_key)
+
+    uploaded_file = st.sidebar.file_uploader("Upload JSON Dashboard File", type=["txt"])
+    question = st.sidebar.text_input("Enter Your Question Here")
+
+    if uploaded_file and question:
+        with st.spinner("Processing..."):
+            json_data = load_json_file(uploaded_file)
+            if json_data:
+                task_type = identify_task_type_from_json(json_data, question)
+                result = generate_insights_from_json(json_data, question, task_type)
+                st.write(result)
+            else:
+                st.warning("Please upload a valid JSON file.")
+else:
+    st.warning("Please enter your API Key.")
