@@ -25,9 +25,28 @@ def generate_insights_from_html(soup, question, task_type):
     return get_image_info(html_prompts, question, task_type)
 
 # Task type identification based on HTML data
-def identify_task_type_from_html(soup, question):
-    html_prompts = [str(soup)]
-    return identify_task_type(html_prompts, question)
+def identify_task_type(html_prompts, question):
+    generation_config = {
+        "temperature": 0,
+        "max_output_tokens": 4096,
+    }
+
+    model = genai.GenerativeModel(model_name="gemini-1.5-flash", generation_config=generation_config)
+
+    input_prompt = """You are an expert in reading and analyzing the charts."""
+
+    question_prompt = f"""Given a chart and a question, you have to tell which category the question belongs to. Only return the category type of the question and nothing else.
+                          Question : {question}
+
+                          Categories: 
+                          1. If the question is related to question answering or numerical question answering based on chart return 'Question Answering'
+                          2. If the question is related to Chart Summarization or Chart Analysis return 'Summarization'
+                          3. If there are multiple images/charts provided, return 'Comparison'
+                      """
+
+    prompt_parts = [input_prompt] + html_prompts + [question_prompt]
+    response = model.generate_content(prompt_parts)
+    return str(response.text).strip()
 
 # Function to generate insights
 def get_image_info(image_prompts, question, task_type):
@@ -99,7 +118,7 @@ if api_key:
         with st.spinner("Processing..."):
             soup = load_html_file(uploaded_file)
             if soup:
-                task_type = identify_task_type_from_html(soup, question)
+                task_type = identify_task_type([str(soup)], question)
                 result = generate_insights_from_html(soup, question, task_type)
                 st.write(result)
             else:
