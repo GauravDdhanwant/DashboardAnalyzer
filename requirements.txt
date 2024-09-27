@@ -1,6 +1,6 @@
 streamlit
+selenium
 beautifulsoup4
 google-generativeai
 requests
-selenium
 Pillow
