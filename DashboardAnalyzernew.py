@@ -19,7 +19,7 @@ def take_screenshot(url):
     chrome_options.add_argument("--headless")
     chrome_options.add_argument("--disable-gpu")
     chrome_options.add_argument("--no-sandbox")
-    chrome_service = Service('C:\Users\Gaurav Dhanvant\OneDrive\Documents\chrome-win64')  # Update this path
+    chrome_service = Service('C:\Program Files\Google\Chrome\Application\129.0.6668.70\elevation_service.exe')  # Update this path
     driver = webdriver.Chrome(service=chrome_service, options=chrome_options)
     
     driver.get(url)
