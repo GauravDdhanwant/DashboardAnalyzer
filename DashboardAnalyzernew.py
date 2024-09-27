@@ -1,82 +1,47 @@
 import streamlit as st
+from selenium import webdriver
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.chrome.options import Options
 from bs4 import BeautifulSoup
+import requests
 import google.generativeai as genai
-import hashlib
+from io import BytesIO
+from PIL import Image
+import time
 
 # Function to configure the API key
 def configure_api(api_key):
     genai.configure(api_key=api_key)
 
-# Load HTML data from the uploaded file
-def load_html_file(uploaded_file):
-    if uploaded_file is not None:
-        try:
-            content = uploaded_file.read().decode("utf-8")
-            soup = BeautifulSoup(content, "html.parser")
-            return soup
-        except Exception as e:
-            st.error(f"Error parsing HTML: {e}")
-            return None
+# Function to take a screenshot of the dashboard
+def take_screenshot(url):
+    chrome_options = Options()
+    chrome_options.add_argument("--headless")
+    chrome_options.add_argument("--disable-gpu")
+    chrome_options.add_argument("--no-sandbox")
+    chrome_service = Service('C:\Users\Gaurav Dhanvant\OneDrive\Documents\chrome-win64')  # Update this path
+    driver = webdriver.Chrome(service=chrome_service, options=chrome_options)
+    
+    driver.get(url)
+    time.sleep(5)  # Allow the page to fully load
+    
+    screenshot = driver.get_screenshot_as_png()
+    driver.quit()
+    
+    return Image.open(BytesIO(screenshot))
+
+# Function to extract HTML content from the dashboard
+def extract_dashboard_content(url):
+    response = requests.get(url)
+    if response.status_code == 200:
+        soup = BeautifulSoup(response.text, "html.parser")
+        return soup
     else:
+        st.error("Failed to retrieve the dashboard.")
         return None
 
-# Generate a hash key based on input data
-def generate_cache_key(html_content, question):
-    combined = f"{html_content}-{question}"
-    return hashlib.md5(combined.encode()).hexdigest()
-
-# Cache to store results
-cache = {}
-
-# Insight generation from HTML data
-def generate_insights_from_html(soup, question, task_type):
-    html_prompts = [str(soup)]  # Modify as needed to extract relevant parts
-    cache_key = generate_cache_key(str(soup), question)
-
-    if cache_key in cache:
-        st.info("Using cached result")
-        return cache[cache_key]
-
-    response = get_image_info(html_prompts, question, task_type)
-    cache[cache_key] = response
-    return response
-
-# Task type identification based on HTML data
-def identify_task_type(html_prompts, question):
-    generation_config = {
-        "temperature": 0,
-        "max_output_tokens": 4096,
-    }
-
-    model = genai.GenerativeModel(model_name="gemini-1.5-flash", generation_config=generation_config)
-
-    input_prompt = """You are an expert in reading and analyzing the charts."""
-
-    question_prompt = f"""Given a chart and a question, you have to tell which category the question belongs to. Only return the category type of the question and nothing else.
-                          Question : {question}
-
-                          Categories: 
-                          1. If the question is related to question answering or numerical question answering based on chart return 'Question Answering'
-                          2. If the question is related to Chart Summarization or Chart Analysis return 'Summarization'
-                          3. If there are multiple images/charts provided, return 'Comparison'
-                      """
-
-    prompt_parts = [input_prompt] + html_prompts + [question_prompt]
-    
-    # Check if the same request has already been made
-    cache_key = generate_cache_key(str(html_prompts), question)
-    
-    if cache_key in cache:
-        st.info("Using cached result for task type identification")
-        return cache[cache_key]
-    
-    response = model.generate_content(prompt_parts)
-    task_type = str(response.text).strip()
-    cache[cache_key] = task_type
-    return task_type
-
-# Function to generate insights
-def get_image_info(image_prompts, question, task_type):
+# Function to generate insights from the extracted content
+def generate_insights(soup, question=None):
     generation_config = {
         "temperature": 0,
         "max_output_tokens": 4096,
@@ -84,27 +49,31 @@ def get_image_info(image_prompts, question, task_type):
 
     model = genai.GenerativeModel(model_name="gemini-1.5-pro", generation_config=generation_config)
 
-    input_prompt = """You are an expert in reading and analyzing the charts."""
+    input_prompt = "You are an expert in reading and analyzing dashboards."
 
-    question_prompt = f"""Question : {question}"""
+    if question:
+        question_prompt = f"Question: {question}"
+    else:
+        question_prompt = "Provide a comprehensive summary and insights based on the dashboard content."
 
-    # Adjust this logic based on task_type
-    if task_type == "Summarization":
-        # Add specific logic for summarization
-        pass
-    elif task_type == "Question Answering":
-        # Add specific logic for question answering
-        pass
-    elif task_type == "Comparison":
-        # Add specific logic for comparison
-        pass
+    dashboard_content = str(soup)
+    prompt = [input_prompt, dashboard_content, question_prompt]
 
-    prompt_parts = [input_prompt] + image_prompts + [question_prompt]
-    response = model.generate_content(prompt_parts)
-    return str(response.text)
+    response = model.generate_content(prompt)
+    return response.text
+
+# Function to handle the conversation
+def handle_conversation(soup):
+    st.subheader("Ask your questions about the dashboard")
+    question = st.text_input("Your question:")
+    
+    if st.button("Ask"):
+        with st.spinner("Analyzing the dashboard..."):
+            answer = generate_insights(soup, question)
+            st.write(answer)
 
 # Streamlit app
-st.set_page_config(page_title="InsightsBoard", page_icon=":bar_chart:", layout="wide")
+st.set_page_config(page_title="Dashboard Analyzer", page_icon=":bar_chart:", layout="wide")
 
 # Apply the theme
 st.markdown("""
@@ -113,11 +82,7 @@ st.markdown("""
         background-color: #f5f5f5;
     }
     .sidebar .sidebar-content {
-        background-color: #000000;  /* Set sidebar background to black */
-    }
-    .sidebar .sidebar-content .sidebar-header {
-        background-color: #1e3a8a;
-        color: #ffffff;
+        background-color: #000000;
     }
     .stButton>button {
         background-color: #1e3a8a;
@@ -131,24 +96,26 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-st.sidebar.title("InsightsBoard")
+st.sidebar.title("Dashboard Analyzer")
 
 api_key = st.sidebar.text_input("Enter your API Key", type="password")
+dashboard_url = st.sidebar.text_input("Enter Dashboard URL")
 
-if api_key:
+if api_key and dashboard_url:
     configure_api(api_key)
-
-    uploaded_file = st.sidebar.file_uploader("Upload HTML Dashboard File", type=["txt"])
-    question = st.sidebar.text_input("Enter Your Question Here")
-
-    if uploaded_file and question:
-        with st.spinner("Processing..."):
-            soup = load_html_file(uploaded_file)
-            if soup:
-                task_type = identify_task_type([str(soup)], question)
-                result = generate_insights_from_html(soup, question, task_type)
-                st.write(result)
-            else:
-                st.warning("Please upload a valid HTML file.")
+    
+    with st.spinner("Extracting dashboard content..."):
+        soup = extract_dashboard_content(dashboard_url)
+    
+    if soup:
+        st.subheader("Dashboard Preview")
+        screenshot = take_screenshot(dashboard_url)
+        st.image(screenshot, caption="Dashboard Screenshot", use_column_width=True)
+        
+        st.subheader("Generated Insights")
+        insights = generate_insights(soup)
+        st.write(insights)
+        
+        handle_conversation(soup)
 else:
-    st.warning("Please enter your API Key.")
+    st.warning("Please enter your API Key and Dashboard URL.")
