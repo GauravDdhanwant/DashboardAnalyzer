@@ -1,4 +1,5 @@
 import streamlit as st
+import chromedriver_autoinstaller
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
@@ -13,14 +14,18 @@ import time
 def configure_api(api_key):
     genai.configure(api_key=api_key)
 
+# Automatically download and install the appropriate chromedriver version
+chromedriver_autoinstaller.install()
+
 # Function to take a screenshot of the dashboard
 def take_screenshot(url):
     chrome_options = Options()
-    chrome_options.add_argument("--headless")
+    chrome_options.add_argument("--headless")  # Run Chrome in headless mode
     chrome_options.add_argument("--disable-gpu")
     chrome_options.add_argument("--no-sandbox")
-    chrome_service = Service('./chromedriver')  # Update this path
-    driver = webdriver.Chrome(service=chrome_service, options=chrome_options)
+
+    # Initialize WebDriver with the auto-installed ChromeDriver
+    driver = webdriver.Chrome(options=chrome_options)
     
     driver.get(url)
     time.sleep(5)  # Allow the page to fully load
@@ -72,7 +77,7 @@ def handle_conversation(soup):
             answer = generate_insights(soup, question)
             st.write(answer)
 
-# Streamlit app
+# Streamlit app setup
 st.set_page_config(page_title="Dashboard Analyzer", page_icon=":bar_chart:", layout="wide")
 
 # Apply the theme
