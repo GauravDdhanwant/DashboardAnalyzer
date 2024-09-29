@@ -1,8 +1,8 @@
 import streamlit as st
-import chromedriver_autoinstaller
+import selenium
 from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.chrome.options import Options
 from bs4 import BeautifulSoup
 import google.generativeai as genai
 import requests
@@ -18,15 +18,6 @@ def configure_api(api_key):
         st.success("API key configured successfully!")
     except Exception as e:
         st.error(f"Failed to configure API key: {e}")
-
-# Automatically install ChromeDriver using chromedriver-autoinstaller
-def install_chromedriver():
-    st.write("Installing ChromeDriver with chromedriver-autoinstaller...")
-    try:
-        chromedriver_autoinstaller.install()
-        st.success("ChromeDriver installed successfully!")
-    except Exception as e:
-        st.error(f"Failed to install ChromeDriver: {e}")
 
 # Function to take a screenshot of the dashboard (from a URL)
 def take_screenshot(url):
@@ -114,9 +105,6 @@ st.set_page_config(page_title="Dashboard Analyzer", page_icon=":bar_chart:", lay
 st.sidebar.title("Dashboard Analyzer")
 api_key = st.sidebar.text_input("Enter your API Key", type="password")
 dashboard_url = st.sidebar.text_input("Enter Dashboard URL")
-
-# Install ChromeDriver automatically
-install_chromedriver()
 
 # Analyze the dashboard when the button is clicked
 if st.sidebar.button("Analyze"):
