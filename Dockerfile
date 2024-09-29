@@ -8,6 +8,9 @@ RUN apt-get update && apt-get install -y \
     curl \
     gnupg \
     ca-certificates \
+    fonts-liberation \
+    libappindicator3-1 \
+    xdg-utils \
     --no-install-recommends
 
 # Add Google Chrome signing key and repository
@@ -16,7 +19,7 @@ RUN curl -fsSL https://dl-ssl.google.com/linux/linux_signing_key.pub | apt-key a
     && apt-get update \
     && apt-get install -y google-chrome-stable
 
-# Install ChromeDriver based on Chrome version
+# Download and install ChromeDriver (use Chrome version)
 RUN CHROME_VERSION=$(google-chrome --version | grep -oP '\d+\.\d+\.\d+') \
     && wget -q "https://chromedriver.storage.googleapis.com/${CHROME_VERSION}/chromedriver_linux64.zip" -O /tmp/chromedriver.zip \
     && unzip /tmp/chromedriver.zip -d /usr/local/bin/ \
