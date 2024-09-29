@@ -1,4 +1,5 @@
 streamlit
+chromedriver-autoinstaller
 selenium
 beautifulsoup4
 google-generativeai
