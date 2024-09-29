@@ -5,4 +5,5 @@ selenium
 beautifulsoup4
 google-generativeai
 requests
+nest_asyncio
 Pillow
