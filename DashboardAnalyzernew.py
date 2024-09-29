@@ -1,11 +1,15 @@
 import streamlit as st
-from bs4 import BeautifulSoup
+import nest_asyncio
 from pyppeteer import launch
+from bs4 import BeautifulSoup
 import google.generativeai as genai
 import requests
 from io import BytesIO
 from PIL import Image
 import asyncio
+
+# Fix to allow asyncio to run in Streamlit's environment
+nest_asyncio.apply()
 
 # Function to configure the API key for Google Generative AI
 def configure_api(api_key):
@@ -107,7 +111,7 @@ if st.sidebar.button("Analyze"):
 
             if soup:
                 st.subheader("Dashboard Preview")
-                screenshot = asyncio.run(take_screenshot(dashboard_url))
+                screenshot = asyncio.run(take_screenshot(dashboard_url))  # Use asyncio.run to run the async function
                 if screenshot:
                     st.image(screenshot, caption="Dashboard Screenshot", use_column_width=True)
 
