@@ -1,15 +1,14 @@
 import streamlit as st
-import nest_asyncio
-from pyppeteer import launch
+import chromedriver_autoinstaller
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.chrome.service import Service
 from bs4 import BeautifulSoup
 import google.generativeai as genai
 import requests
 from io import BytesIO
 from PIL import Image
-import asyncio
-
-# Fix to allow asyncio to run in Streamlit's environment
-nest_asyncio.apply()
+import time
 
 # Function to configure the API key for Google Generative AI
 def configure_api(api_key):
@@ -20,16 +19,31 @@ def configure_api(api_key):
     except Exception as e:
         st.error(f"Failed to configure API key: {e}")
 
-# Function to take a screenshot using pyppeteer
-async def take_screenshot(url):
+# Automatically install ChromeDriver using chromedriver-autoinstaller
+def install_chromedriver():
+    st.write("Installing ChromeDriver with chromedriver-autoinstaller...")
+    try:
+        chromedriver_autoinstaller.install()
+        st.success("ChromeDriver installed successfully!")
+    except Exception as e:
+        st.error(f"Failed to install ChromeDriver: {e}")
+
+# Function to take a screenshot of the dashboard (from a URL)
+def take_screenshot(url):
     st.write("Taking a screenshot of the dashboard...")
     try:
-        browser = await launch(headless=True)
-        page = await browser.newPage()
-        await page.goto(url)
-        await asyncio.sleep(5)  # Allow the page to load completely
-        screenshot = await page.screenshot()
-        await browser.close()
+        chrome_options = Options()
+        chrome_options.add_argument("--headless")  # Run Chrome in headless mode
+        chrome_options.add_argument("--disable-gpu")
+        chrome_options.add_argument("--no-sandbox")
+
+        # Initialize WebDriver with the installed ChromeDriver
+        driver = webdriver.Chrome(options=chrome_options)
+        driver.get(url)
+        time.sleep(5)  # Allow the page to load completely
+        
+        screenshot = driver.get_screenshot_as_png()
+        driver.quit()  # Close the browser
         st.success("Screenshot taken successfully!")
         return Image.open(BytesIO(screenshot))
     except Exception as e:
@@ -101,6 +115,9 @@ st.sidebar.title("Dashboard Analyzer")
 api_key = st.sidebar.text_input("Enter your API Key", type="password")
 dashboard_url = st.sidebar.text_input("Enter Dashboard URL")
 
+# Install ChromeDriver automatically
+install_chromedriver()
+
 # Analyze the dashboard when the button is clicked
 if st.sidebar.button("Analyze"):
     if api_key and dashboard_url:
@@ -111,7 +128,7 @@ if st.sidebar.button("Analyze"):
 
             if soup:
                 st.subheader("Dashboard Preview")
-                screenshot = asyncio.run(take_screenshot(dashboard_url))  # Use asyncio.run to run the async function
+                screenshot = take_screenshot(dashboard_url)
                 if screenshot:
                     st.image(screenshot, caption="Dashboard Screenshot", use_column_width=True)
 
