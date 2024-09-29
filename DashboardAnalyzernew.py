@@ -4,123 +4,139 @@ from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 from bs4 import BeautifulSoup
-import requests
 import google.generativeai as genai
+import requests
 from io import BytesIO
 from PIL import Image
 import time
 
-# Function to configure the API key
+# Function to configure the API key for Google Generative AI
 def configure_api(api_key):
-    genai.configure(api_key=api_key)
+    st.write("Configuring Google Generative AI API key...")
+    try:
+        genai.configure(api_key=api_key)
+        st.success("API key configured successfully!")
+    except Exception as e:
+        st.error(f"Failed to configure API key: {e}")
 
-# Automatically download and install the appropriate chromedriver version
-chromedriver_autoinstaller.install()
+# Function to automatically install ChromeDriver
+def install_chromedriver():
+    st.write("Installing ChromeDriver with chromedriver-autoinstaller...")
+    try:
+        chromedriver_autoinstaller.install()
+        st.success("ChromeDriver installed successfully!")
+    except Exception as e:
+        st.error(f"Failed to install ChromeDriver: {e}")
 
-# Function to take a screenshot of the dashboard
+# Function to take a screenshot of a dashboard from a URL
 def take_screenshot(url):
-    chrome_options = Options()
-    chrome_options.add_argument("--headless")  # Run Chrome in headless mode
-    chrome_options.add_argument("--disable-gpu")
-    chrome_options.add_argument("--no-sandbox")
+    st.write("Taking a screenshot of the dashboard...")
+    try:
+        chrome_options = Options()
+        chrome_options.add_argument("--headless")
+        chrome_options.add_argument("--disable-gpu")
+        chrome_options.add_argument("--no-sandbox")
+        
+        # Initialize WebDriver with the installed ChromeDriver
+        driver = webdriver.Chrome(options=chrome_options)
+        driver.get(url)
+        time.sleep(10)  # Allow the page to fully load
+        
+        screenshot = driver.get_screenshot_as_png()
+        driver.quit()
+        st.success("Screenshot taken successfully!")
+        return Image.open(BytesIO(screenshot))
+    except Exception as e:
+        st.error(f"Failed to take a screenshot: {e}")
+        return None
 
-    # Initialize WebDriver with the auto-installed ChromeDriver
-    driver = webdriver.Chrome(options=chrome_options)
-    
-    driver.get(url)
-    time.sleep(5)  # Allow the page to fully load
-    
-    screenshot = driver.get_screenshot_as_png()
-    driver.quit()
-    
-    return Image.open(BytesIO(screenshot))
-
-# Function to extract HTML content from the dashboard
+# Function to extract HTML content from the dashboard URL
 def extract_dashboard_content(url):
-    response = requests.get(url)
-    if response.status_code == 200:
-        soup = BeautifulSoup(response.text, "html.parser")
-        return soup
-    else:
-        st.error("Failed to retrieve the dashboard.")
+    st.write("Extracting HTML content from the dashboard...")
+    try:
+        response = requests.get(url)
+        if response.status_code == 200:
+            soup = BeautifulSoup(response.text, "html.parser")
+            st.success("HTML content extracted successfully!")
+            return soup
+        else:
+            st.error(f"Failed to retrieve the dashboard. HTTP status code: {response.status_code}")
+            return None
+    except Exception as e:
+        st.error(f"Failed to extract HTML content: {e}")
         return None
 
 # Function to generate insights from the extracted content
 def generate_insights(soup, question=None):
-    generation_config = {
-        "temperature": 0,
-        "max_output_tokens": 4096,
-    }
+    st.write("Generating insights using Google Generative AI...")
+    try:
+        generation_config = {
+            "temperature": 0,
+            "max_output_tokens": 4096,
+        }
 
-    model = genai.GenerativeModel(model_name="gemini-1.5-pro", generation_config=generation_config)
+        model = genai.GenerativeModel(model_name="gemini-1.5-pro", generation_config=generation_config)
 
-    input_prompt = "You are an expert in reading and analyzing dashboards."
+        input_prompt = "You are an expert in reading and analyzing dashboards."
 
-    if question:
-        question_prompt = f"Question: {question}"
-    else:
-        question_prompt = "Provide a comprehensive summary and insights based on the dashboard content."
+        if question:
+            question_prompt = f"Question: {question}"
+        else:
+            question_prompt = "Provide a comprehensive summary and insights based on the dashboard content."
 
-    dashboard_content = str(soup)
-    prompt = [input_prompt, dashboard_content, question_prompt]
+        dashboard_content = str(soup)
+        prompt = [input_prompt, dashboard_content, question_prompt]
 
-    response = model.generate_content(prompt)
-    return response.text
+        response = model.generate_content(prompt)
+        st.success("Insights generated successfully!")
+        return response.text
+    except Exception as e:
+        st.error(f"Failed to generate insights: {e}")
+        return None
 
-# Function to handle the conversation
+# Function to handle user questions and generate insights
 def handle_conversation(soup):
     st.subheader("Ask your questions about the dashboard")
     question = st.text_input("Your question:")
     
     if st.button("Ask"):
         with st.spinner("Analyzing the dashboard..."):
-            answer = generate_insights(soup, question)
-            st.write(answer)
+            result = generate_insights(soup, question)
+            if result:
+                st.write(result)
+            else:
+                st.error("Failed to generate insights. Please try again.")
 
 # Streamlit app setup
 st.set_page_config(page_title="Dashboard Analyzer", page_icon=":bar_chart:", layout="wide")
 
-# Apply the theme
-st.markdown("""
-    <style>
-    .reportview-container {
-        background-color: #f5f5f5;
-    }
-    .sidebar .sidebar-content {
-        background-color: #000000;
-    }
-    .stButton>button {
-        background-color: #1e3a8a;
-        color: #ffffff;
-        border-radius: 4px;
-        border: none;
-    }
-    .stImage {
-        max-width: 100%;
-    }
-    </style>
-    """, unsafe_allow_html=True)
-
+# Sidebar for user input
 st.sidebar.title("Dashboard Analyzer")
-
 api_key = st.sidebar.text_input("Enter your API Key", type="password")
 dashboard_url = st.sidebar.text_input("Enter Dashboard URL")
 
-if api_key and dashboard_url:
-    configure_api(api_key)
-    
-    with st.spinner("Extracting dashboard content..."):
-        soup = extract_dashboard_content(dashboard_url)
-    
-    if soup:
-        st.subheader("Dashboard Preview")
-        screenshot = take_screenshot(dashboard_url)
-        st.image(screenshot, caption="Dashboard Screenshot", use_column_width=True)
+# Install ChromeDriver automatically
+install_chromedriver()
+
+# Analyze the dashboard when the button is clicked
+if st.sidebar.button("Analyze"):
+    if api_key and dashboard_url:
+        configure_api(api_key)
         
-        st.subheader("Generated Insights")
-        insights = generate_insights(soup)
-        st.write(insights)
-        
-        handle_conversation(soup)
-else:
-    st.warning("Please enter your API Key and Dashboard URL.")
+        with st.spinner("Processing..."):
+            soup = extract_dashboard_content(dashboard_url)
+            
+            if soup:
+                st.subheader("Dashboard Preview")
+                screenshot = take_screenshot(dashboard_url)
+                if screenshot:
+                    st.image(screenshot, caption="Dashboard Screenshot", use_column_width=True)
+
+                st.subheader("Dashboard Content")
+                st.text(soup.prettify()[:1000])  # Display a part of the HTML content
+
+                handle_conversation(soup)
+            else:
+                st.error("Could not extract the dashboard content.")
+    else:
+        st.warning("Please enter both the API Key and the Dashboard URL.")
