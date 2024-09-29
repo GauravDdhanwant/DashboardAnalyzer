@@ -1,14 +1,11 @@
 import streamlit as st
-import chromedriver_autoinstaller
-from selenium import webdriver
-from selenium.webdriver.chrome.service import Service
-from selenium.webdriver.chrome.options import Options
 from bs4 import BeautifulSoup
+from pyppeteer import launch
 import google.generativeai as genai
 import requests
 from io import BytesIO
 from PIL import Image
-import time
+import asyncio
 
 # Function to configure the API key for Google Generative AI
 def configure_api(api_key):
@@ -19,31 +16,16 @@ def configure_api(api_key):
     except Exception as e:
         st.error(f"Failed to configure API key: {e}")
 
-# Function to automatically install ChromeDriver
-def install_chromedriver():
-    st.write("Installing ChromeDriver with chromedriver-autoinstaller...")
-    try:
-        chromedriver_autoinstaller.install()
-        st.success("ChromeDriver installed successfully!")
-    except Exception as e:
-        st.error(f"Failed to install ChromeDriver: {e}")
-
-# Function to take a screenshot of a dashboard from a URL
-def take_screenshot(url):
+# Function to take a screenshot using pyppeteer
+async def take_screenshot(url):
     st.write("Taking a screenshot of the dashboard...")
     try:
-        chrome_options = Options()
-        chrome_options.add_argument("--headless")
-        chrome_options.add_argument("--disable-gpu")
-        chrome_options.add_argument("--no-sandbox")
-        
-        # Initialize WebDriver with the installed ChromeDriver
-        driver = webdriver.Chrome(options=chrome_options)
-        driver.get(url)
-        time.sleep(10)  # Allow the page to fully load
-        
-        screenshot = driver.get_screenshot_as_png()
-        driver.quit()
+        browser = await launch(headless=True)
+        page = await browser.newPage()
+        await page.goto(url)
+        await asyncio.sleep(5)  # Allow the page to load completely
+        screenshot = await page.screenshot()
+        await browser.close()
         st.success("Screenshot taken successfully!")
         return Image.open(BytesIO(screenshot))
     except Exception as e:
@@ -98,7 +80,7 @@ def generate_insights(soup, question=None):
 def handle_conversation(soup):
     st.subheader("Ask your questions about the dashboard")
     question = st.text_input("Your question:")
-    
+
     if st.button("Ask"):
         with st.spinner("Analyzing the dashboard..."):
             result = generate_insights(soup, question)
@@ -115,20 +97,17 @@ st.sidebar.title("Dashboard Analyzer")
 api_key = st.sidebar.text_input("Enter your API Key", type="password")
 dashboard_url = st.sidebar.text_input("Enter Dashboard URL")
 
-# Install ChromeDriver automatically
-install_chromedriver()
-
 # Analyze the dashboard when the button is clicked
 if st.sidebar.button("Analyze"):
     if api_key and dashboard_url:
         configure_api(api_key)
-        
+
         with st.spinner("Processing..."):
             soup = extract_dashboard_content(dashboard_url)
-            
+
             if soup:
                 st.subheader("Dashboard Preview")
-                screenshot = take_screenshot(dashboard_url)
+                screenshot = asyncio.run(take_screenshot(dashboard_url))
                 if screenshot:
                     st.image(screenshot, caption="Dashboard Screenshot", use_column_width=True)
 
